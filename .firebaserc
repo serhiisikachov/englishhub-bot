@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "eh-bot-f9f93",
+    "staging": "eh-bot-46aff"
+  }
+}
