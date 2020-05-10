@@ -4,7 +4,7 @@ const {default: firestoreSession} = require('telegraf-session-firestore');
 const Session = require('telegraf/session');
 const {Stage} = Telegraf;
 
-const GoogleSheet = require('./modules/google-sheet');
+//const GoogleSheet = require('./modules/google-sheet');
 
 const {MainMenu} = require('./modules/main-menu');
 
@@ -14,8 +14,8 @@ if (Object.keys(functions.config()).length) {
 }
 
 
-let googleSheet = new GoogleSheet();
-googleSheet.init();
+// let googleSheet = new GoogleSheet();
+// googleSheet.init();
 
 
 let admin = require("firebase-admin");
@@ -57,7 +57,6 @@ bot.use(async (ctx, next) => {
 });
 
 bot.use((ctx, next) => {
-    //console.log(ctx);
 
     ctx.customizedReply = (text, extra = undefined) => {
         return ctx.reply(
@@ -71,12 +70,27 @@ bot.use((ctx, next) => {
     };
     return next();
 });
+bot.use(Session());
+//bot.use(firestoreSession(db.collection('sessions')));
+bot.use((ctx, next) => {
+    db.collection('system').doc('version').get().then((version) => {
+        let importVersion = version.data().version;
 
-bot.use(firestoreSession(db.collection('sessions')));
-bot.use((ctx) => {
-    let version = db.collection('system').doc('version');
+        if (ctx.session.importVersion === undefined) {
+            ctx.session.importVersion = importVersion;
+            ctx.session.quote = {};
+        }
+
+        if (importVersion !== ctx.session.importVersion) {
+            ctx.session.importVersion = importVersion;
+            ctx.session.quote = {};
+
+            ctx.reply("Дані оновилися! Тож треба почати спочатку! Таке трапляється :) ")
+        }
+
+        return next();
+    });
 });
-
 
 const IndividualClass = require('./modules/scene/individual');
 let individualClass = new IndividualClass(db);

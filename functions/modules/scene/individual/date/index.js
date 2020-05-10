@@ -33,12 +33,26 @@ class Teacher {
         }).catch((error) => {console.log(error)});
     }
 
-    handle(ctx, next) {
-        this.teacherRef.doc(ctx.match).get().then((teacher)=>{
-            ctx.session.teacher = {"id": teacher.id, "name": teacher.data().name};
-            next(ctx);
-        });
+    handle(ctx) {
+        ctx.session.quote.date = true;
 
+    }
+
+
+    isFullfilled(ctx) {
+        return ctx.session.quote.date;
+    }
+
+    cleanUp(ctx) {
+        ctx.session.quote.date = null;
+    }
+
+    requireInput() {
+        return true;
+    }
+
+    getKey() {
+        return 'date';
     }
 }
 

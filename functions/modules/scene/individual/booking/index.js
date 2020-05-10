@@ -7,7 +7,6 @@ class Booking {
 
     renderConfirmation(ctx) {
         this.db.collection('timeslots').doc(ctx.session.timeslot.id).get().then((timeslot) => {
-            console.log(timeslot.data());
             ctx.deleteMessage();
             return ctx.reply(`Перевір ще раз:
             

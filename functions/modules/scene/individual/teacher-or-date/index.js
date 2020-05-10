@@ -7,8 +7,8 @@ class TeacherOrDate {
             "Обиратимеш по вчителю чи по даті?",
             Markup.inlineKeyboard(
                 [
-                    Markup.callbackButton('Вчитель', '/choose-by-teacher'),
-                    Markup.callbackButton('Дата', '/choose-by-date')
+                    Markup.callbackButton('Вчитель', 'choose-by:teacher'),
+                    Markup.callbackButton('Дата', 'choose-by:date')
                 ]
             ).extra()
         )
@@ -16,6 +16,23 @@ class TeacherOrDate {
 
     handle(ctx) {
         ctx.answerCbQuery(ctx.match[1]);
+        ctx.session.quote.teacherOrDate = ctx.match[1];
+    }
+
+    isFullfilled(ctx) {
+        return ctx.session.quote.teacherOrDate;
+    }
+
+    cleanUp(ctx) {
+        ctx.session.quote.teacherOrDate = null;
+    }
+
+    requireInput() {
+        return true;
+    }
+
+    getKey() {
+        return 'teacherOrDate';
     }
 }
 

@@ -22,13 +22,28 @@ class Teacher {
         }).catch((error) => {console.log(error)});
     }
 
-    handle(ctx, next) {
+    async handle(ctx) {
         ctx.answerCbQuery(`Ти обрав ${ctx.match[1]}`);
-        this.teacherRef.doc(ctx.match[1]).get().then((teacher)=>{
-            ctx.session.teacher = {"id": teacher.id, "name": teacher.data().name};
-            next(ctx);
+        return this.teacherRef.doc(ctx.match[1]).get().then((teacher)=>{
+            console.log('finally');
+            ctx.session.quote.teacher = {"id": teacher.id, "name": teacher.data().name};
         });
+    }
 
+    isFullfilled(ctx) {
+        return ctx.session.quote.teacher;
+    }
+
+    cleanUp(ctx) {
+        ctx.session.quote.teacher = null;
+    }
+
+    requireInput() {
+        return true;
+    }
+
+    getKey() {
+        return 'teacher';
     }
 }
 

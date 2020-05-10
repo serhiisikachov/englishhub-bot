@@ -8,6 +8,7 @@ const Teacher = require('./teacher');
 const Date = require('./date');
 const Timeslot = require('./timeslot');
 const Booking = require('./booking');
+const StepEngine = require('./step-engine');
 
 class IndividualClass {
     getScene() {
@@ -21,6 +22,16 @@ class IndividualClass {
         this.dateStep = new Date(firestore);
         this.timeslotStep = new Timeslot(firestore);
         this.bookingStep = new Booking(firestore);
+        this.stepEngine = new StepEngine(
+            [
+                this.locationStep,
+                this.teacherOrDateStep,
+                [
+                    this.teacherStep,
+                    this.dateStep
+                ]
+            ]
+        );
         this.scene = this.initScene();
     }
 
@@ -31,49 +42,46 @@ class IndividualClass {
     initScene() {
         let scene = new BaseScene(KEY_SCENE_INDIVIDUAL);
         scene.enter((ctx) => {
-            console.log(ctx.scene.state);
+            console.log("Enter scene");
             ctx.scene.state.messages = [];
 
             ctx.answerCbQuery("", false);
-           // ctx.deleteMessage();
+            // ctx.deleteMessage();
             ctx.reply(
                 `Давай почнемо!`,
                 Markup.keyboard([Markup.callbackButton("НАЗАД")]).resize().extra()
             ).then((msg) => {
-                console.log(msg.message_id, msg.text);
                 //Solve this globally.
                 ctx.scene.state.messages.push(msg.message_id);
-                this.locationStep.render(ctx);
+                //this.locationStep.render(ctx);
+                this.stepEngine.run(ctx, null);
             });
         });
 
-        // scene.leave(
-        //     (ctx) => {
-        //         console.log(ctx.scene.state);
-        //
-        //         ctx.scene.state.messages.forEach((messageId) => {
-        //             console.log(messageId);
-        //             ctx.deleteMessage(messageId).catch((error) => {
-        //                 console.log(error);
-        //             });
-        //         });
-        //     }
-        // );
+        scene.leave(
+            (ctx) => {
+                console.log("Leave scene.");
+
+                ctx.scene.state.messages.forEach((messageId) => {
+                    console.log(messageId);
+                    ctx.deleteMessage(messageId).catch((error) => {
+                        console.log(error);
+                    });
+                });
+            }
+        );
 
         scene.action(/location:(.+)/, async (ctx) => {
-            this.locationStep.handle(ctx);
-            this.teacherOrDateStep.render(ctx);
+            this.stepEngine.run(ctx, this.locationStep.getKey());
         });
 
-        scene.action('/choose-by-teacher', async (ctx) => {
-            this.teacherOrDateStep.handle(ctx);
-            this.teacherStep.render(ctx);
+        scene.action(/choose-by:(.+)/, async (ctx) => {
+            this.stepEngine.run(ctx, this.teacherOrDateStep.getKey());
 
         });
 
-        scene.action('/choose-by-date', async (ctx) => {
-            this.teacherOrDateStep.handle(ctx);
-            this.dateStep.render(ctx);
+        scene.action(/choose-by:(.+)/, async (ctx) => {
+            this.stepEngine.run(ctx, this.teacherOrDateStep.getKey());
 
         });
 
@@ -82,7 +90,7 @@ class IndividualClass {
         });
 
         scene.action(/teacher:(.+)/, async (ctx) => {
-            this.teacherStep.handle(ctx, (ctx) => this.timeslotStep.renderByTeacher(ctx));
+            this.stepEngine.run(ctx, this.teacherStep.getKey());
 
         });
 
@@ -90,7 +98,9 @@ class IndividualClass {
             this.timeslotStep.handle(ctx, (ctx) => this.bookingStep.renderConfirmation(ctx));
         });
 
-        scene.action("booking:yes", async (ctx) => {this.bookingStep.create(ctx)});
+        scene.action("booking:yes", async (ctx) => {
+            this.bookingStep.create(ctx)
+        });
 
         scene.hears('НАЗАД', async (ctx) => {
                 ctx.scene.leave();
@@ -99,7 +109,7 @@ class IndividualClass {
 
         return scene;
     }
-}
 
+}
 
 module.exports = IndividualClass;

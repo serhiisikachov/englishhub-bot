@@ -92,7 +92,7 @@ class GoogleSheet {
         // Load client secrets from a local file.
         fs.readFile('credentials.json', (err, content) => {
             if (err) return console.log('Error loading client secret file:', err);
-            console.log(content);
+            //console.log(content);
             // Authorize a client with credentials, then call the Google Sheets API.
             return authorize(JSON.parse(content), listMajors);
         });

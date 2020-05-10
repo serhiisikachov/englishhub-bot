@@ -17,6 +17,7 @@
     "firebase-admin": "^8.6.0",
     "firebase-functions": "^3.3.0",
     "googleapis": "^39.2.0",
+    "javascript-algorithms-and-data-structures": "github:trekhleb/javascript-algorithms",
     "moment": "^2.24.0",
     "telegraf": "^3.36.0",
     "telegraf-inline-menu": "^4.0.0",
