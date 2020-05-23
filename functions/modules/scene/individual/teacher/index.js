@@ -1,8 +1,10 @@
 const Markup = require('telegraf/markup');
+const {Graph, GraphVertex, GraphEdge} = require('../../../data-structures');
 
-class Teacher {
-    constructor(firebase) {
-        this.db = firebase;
+class Teacher extends GraphVertex {
+    constructor(value) {
+        super(value);
+        this.db = value.firestore;
         this.teacherRef = this.db.collection('locations').doc('kharkiv').collection('teachers');
     }
 
@@ -22,20 +24,19 @@ class Teacher {
         }).catch((error) => {console.log(error)});
     }
 
-    async handle(ctx) {
+    handle(ctx) {
         ctx.answerCbQuery(`Ти обрав ${ctx.match[1]}`);
         return this.teacherRef.doc(ctx.match[1]).get().then((teacher)=>{
-            console.log('finally');
-            ctx.session.quote.teacher = {"id": teacher.id, "name": teacher.data().name};
+            ctx.session.quote[this.getKey()] = {"id": teacher.id, "name": teacher.data().name};
         });
     }
 
     isFullfilled(ctx) {
-        return ctx.session.quote.teacher;
+        return ctx.session.quote[this.getKey()];
     }
 
     cleanUp(ctx) {
-        ctx.session.quote.teacher = null;
+        ctx.session.quote[this.getKey()] = null;
     }
 
     requireInput() {

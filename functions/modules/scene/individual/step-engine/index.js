@@ -1,164 +1,127 @@
-const Graph = require('javascript-algorithms-and-data-structures/src/data-structures/graph/Graph');
+const {Graph, GraphVertex, GraphEdge} = require('../../../data-structures');
 
 class StepEngine extends Graph{
 
-
-//Check or expired session => drop session and start over from the first step
-//If button of further step is pressed => render current needed step
-//If the button of correct session is pressed => clean all the next step
-
     async run(ctx, currentStepKey) {
-        let currentStep = getCurrentStep(this.steps, currentStepKey);
 
-        if (arePrevStepsFulfilled(ctx, this.steps, currentStepKey)) {
-            cleanUpNextSteps(ctx, this.steps, currentStepKey);
-            if (!currentStep.requireInput() || Array.isArray(ctx.match)) {
-                console.log("!currentStep.requireInput() || ctx.match.length > 0");
+        let currentStep = getCurrentStep(this, currentStepKey);
+        if (!currentStep) {
+            currentStep = getRoot(this);
+        }
+
+        if (arePrevStepsFulfilled(ctx, this, currentStep)) {
+            cleanUpNextSteps(ctx, this, currentStep);
+            cleanUpStepHistory(ctx, this, currentStep);
+
+            if (stepIsVisited(ctx, currentStep)) {
                 await currentStep.handle(ctx);
-                getNextStep(ctx, this.steps, currentStep.getKey()).render(ctx);
 
-                return;
+                currentStep = getNextStep(ctx, this, currentStep);
             }
 
-            console.log("currentStep.render(ctx);");
-            currentStep.render(ctx);
+            if (currentStep) {
+                currentStep.render(ctx);
+                if (ctx.scene.state.stepHistory) {
+                    ctx.scene.state.stepHistory.push(currentStep.getKey());
+                }
+            }
 
             return;
         }
 
-        ctx.match = null;
-        this.run(ctx, getPrevStep(this.steps, currentStep.getKey()).getKey());
+        let prevStep = getPrevStep(ctx, this, currentStep);
+        if (prevStep) {
+            this.run(ctx, prevStep.getKey());
+        }
     }
 }
 
-function getCurrentStep(steps, currentStepKey) {
-    for (let i = 0; i < steps.length; i++) {
-        if (Array.isArray(steps[i])) {
-            let current = getCurrentStep(steps[i]);
-            if (current.getKey() === currentStepKey) {
-                return current;
-            }
-
-            continue;
-        }
-
-        if (steps[i].getKey() === currentStepKey) {
-            console.log(steps[i]);
-            return steps[i];
-        }
-    }
-
-    return steps[0];
+function getRoot(graph) {
+    return graph.getAllEdges()[0].startVertex;
 }
 
-function getPrevStep(steps, currentStepKey) {
-    for (let i = 0; i < steps.length; i++) {
-        if (Array.isArray(steps[i])) {
-            for (let j = 0; j < steps[i].leading; j++) {
-                if (steps[i][j].isFullfilled()) {
-                    return steps[i][j];
-                }
-            }
-
-            continue;
-        }
-
-        if (steps[i].getKey() === currentStepKey) {
-            if (i < 1) {
-                return steps[0];
-            }
-
-            return steps[i - 1];
-        }
-    }
-
-    throw new Error("Prev step was not found.");
+function getCurrentStep(graph, currentStepKey) {
+    return graph.getVertexByKey(currentStepKey);
 }
 
-function getNextStep(ctx, steps, currentStepKey) {
-    for (let i = 0; i < steps.length; i++) {
-
-        console.log(i);
-
-        if (steps[i].getKey() === currentStepKey) {
-            if (i + 1 >= steps.length) {
-                return steps[i];
-            }
-
-            if (Array.isArray(steps[i+1])) {
-                for (let j = 0; j < steps[i+1].length; j++) {
-                    console.log(`${steps[i+1][j].getKey()} === ${ctx.match[1]}`);
-                    if (steps[i+1][j].getKey() === ctx.match[1]) {
-                        return steps[i+1][j];
-                    }
-                }
-
-                continue;
-            }
-
-            return steps[i + 1];
-        }
+function getPrevStep(ctx, graph, currentVertex) {
+    if (!ctx.scene.state.stepHistory.length) {
+        return null;
     }
 
-    throw new Error('Step not found.');
+    if (ctx.scene.state.stepHistory[0].getKey() === currentVertex.getKey()) {
+        return null;
+    }
+
+    for (let i = 0; i < ctx.scene.state.stepHistory.length; i++) {
+        if (ctx.scene.state.stepHistory[0].getKey() === currentVertex.getKey()) {
+            return graph.getVertexByKey(ctx.scene.state.stepHistory[i - 1]);
+        }
+    }
+    return null;
 }
 
-function arePrevStepsFulfilled(ctx, steps, currentStepKey) {
-    if (currentStepKey === null) return true;
+function getNextStep(ctx, graph, currentVertex) {
+    let neighbors = graph.getNeighbors(currentVertex);
 
-    for (let i = 0; i < steps.length; i++) {
-        if (Array.isArray(steps[i])) {
-            let fulfilledItems = steps[i].filter(item => {
-               return item.isFullfilled(ctx);
-            });
+    if (neighbors.length === 0) {
+        return null;
+    }
 
-            if (fulfilledItems.length) {
-                continue;
-            }
+    if (neighbors.length === 1) {
+        return neighbors[0];
+    }
 
+    //TODO: think how to make this better.
+    return graph.getVertexByKey(ctx.match[1]);
+}
+
+function arePrevStepsFulfilled(ctx, graph, currentVertex) {
+    let root = getRoot(graph);
+    if (root.getKey() === currentVertex.getKey()) {
+        return true;
+    }
+
+    let historyKeys = ctx.scene.state.stepHistory;
+
+    for (let i = 0; i < historyKeys.length - 1; i++) {
+        let key = historyKeys[i];
+        if (!graph.getVertexByKey(key).isFullfilled(ctx)) {
             return false;
         }
 
-        if (steps[i].getKey() === currentStepKey) {
-            return true;
-        }
-
-        if (steps[i].isFullfilled(ctx)) {
-            continue;
-        }
-
-        return false;
+        // if (i === historyKeys.length - 1) {
+        //     let lastFullfilledNode = graph.getVertexByKey(key);
+        //
+        //     return graph.getNeighbors(lastFullfilledNode)
+        //         .filter(item => item.getKey() === currentVertex.getKey()).length
+        // }
     }
 
-    return false;
+    return true;
 }
 
-function cleanUpNextSteps(ctx, steps, currentStepKey)
+function cleanUpNextSteps(ctx, graph, currentVertex)
 {
-    let cleanUpMarker = false;
-
-    if (currentStepKey === null) {
-        cleanUpMarker = true;
-    }
-
-    for (let i = 0; i < steps.length; i++) {
-        if (Array.isArray(steps[i])) {
-            cleanUpNextSteps(ctx, steps[i], null);
-
-            continue;
-        }
-
-        if (steps[i].getKey() === currentStepKey) {
-            cleanUpMarker = true;
-        }
-
-        if (cleanUpMarker) {
-            steps[i].cleanUp(ctx);
-        }
-    }
+    graph.getNeighbors(currentVertex).forEach(vertex => {
+        vertex.cleanUp(ctx);
+        cleanUpNextSteps(ctx, graph, vertex);
+    });
 }
 
+function cleanUpStepHistory(ctx, graph, currentVertex)
+{
+    ctx.scene.state.stepHistory = ctx.scene.state.stepHistory.slice(
+        0,
+        1 + ctx.scene.state.stepHistory.findIndex(element => {
+            return element === currentVertex.getKey();
+        })
+    );
+}
 
-
+function stepIsVisited(ctx, currentVertex)
+{
+    return ctx.scene.state.stepHistory.filter((item) => item === currentVertex.getKey()).length > 0;
+}
 
 module.exports = StepEngine;

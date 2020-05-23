@@ -1,8 +1,8 @@
 const Markup = require('telegraf/markup');
 
 class Teacher {
-    constructor(firebase) {
-        this.db = firebase;
+    constructor(value) {
+        this.db = value.firestore;
         this.timeslotRef = this.db.collection('locations').doc('kharkiv').collection('timeslots');
     }
 
@@ -35,7 +35,7 @@ class Teacher {
 
     handle(ctx) {
         ctx.session.quote.date = true;
-
+        ctx.scene.state.stepHistory.push(this.getKey());
     }
 
 

@@ -1,8 +1,10 @@
 const Markup = require('telegraf/markup');
+const {Graph, GraphVertex, GraphEdge} = require('../../../data-structures');
+class Location extends GraphVertex {
+    constructor(value) {
+        super(value);
 
-class Location {
-    constructor(firestore) {
-        this.db = firestore;
+        this.db = value.firestore;
         this.locationRef = this.db.collection('locations');
     }
 
@@ -25,7 +27,7 @@ class Location {
                 ctx.reply(
                     "У якому місті будеш навчатися?",
                     Markup.inlineKeyboard(buttons).extra()
-                );
+                ).then((msg) => ctx.scene.state.messages.push(msg.message_id));
             });
 
         }).catch((error) => {
@@ -35,15 +37,18 @@ class Location {
 
     handle(ctx) {
         ctx.answerCbQuery(`Ти обрав ${ctx.match[1]}`);
-        ctx.session.quote.location = ctx.match[1];
+        ctx.session.quote[this.getKey()] = {
+            "selected": ctx.match[1]
+        };
+
     }
 
     isFullfilled(ctx) {
-        return ctx.session.quote.location;
+        return ctx.session.quote[this.getKey()];
     }
 
     cleanUp(ctx) {
-        ctx.session.quote.location = null;
+        ctx.session.quote[this.getKey()] = null;
     }
 
     requireInput() {
@@ -51,8 +56,13 @@ class Location {
     }
 
     getKey() {
-        return 'locations';
+        return 'location';
     }
+}
+
+function addHistoryLog(ctx, key)
+{
+
 }
 
 module.exports = Location;

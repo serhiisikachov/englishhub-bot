@@ -4,7 +4,7 @@ const {default: firestoreSession} = require('telegraf-session-firestore');
 const Session = require('telegraf/session');
 const {Stage} = Telegraf;
 
-//const GoogleSheet = require('./modules/google-sheet');
+const GoogleSheet = require('./modules/google-sheet');
 
 const {MainMenu} = require('./modules/main-menu');
 
@@ -14,9 +14,8 @@ if (Object.keys(functions.config()).length) {
 }
 
 
-// let googleSheet = new GoogleSheet();
-// googleSheet.init();
-
+let googleSheet = new GoogleSheet();
+googleSheet.init();
 
 let admin = require("firebase-admin");
 let serviceAccount = require(config.fireb["service-account"]);
@@ -34,27 +33,6 @@ const db = admin.firestore();
 const bot = new Telegraf(config.telegram.bot_token);
 const mainMenu = new MainMenu();
 
-bot.use(async (ctx, next) => {
-    let id = ctx.from.id;
-    let firstName = ctx.from.first_name;
-    let lastName = ctx.from.last_name;
-    let username = ctx.from.username;
-
-    //todo: move students inside location
-    let studentRef = db.collection('students');
-    db.collection('students').where('id', '==', id).get().then((students) => {
-        if (students.docs.length) {
-            students.forEach((student) => {
-                student.ref.update({firstName: firstName, lastName: lastName, username: username});
-            });
-
-            return next();
-        }
-        studentRef.add({id: id, firstName: firstName, lastName: lastName, username: username});
-
-        return next();
-    });
-});
 
 bot.use((ctx, next) => {
 
@@ -71,6 +49,7 @@ bot.use((ctx, next) => {
     return next();
 });
 bot.use(Session());
+
 //bot.use(firestoreSession(db.collection('sessions')));
 bot.use((ctx, next) => {
     db.collection('system').doc('version').get().then((version) => {
@@ -87,6 +66,30 @@ bot.use((ctx, next) => {
 
             ctx.reply("Дані оновилися! Тож треба почати спочатку! Таке трапляється :) ")
         }
+
+        return next();
+    });
+});
+
+bot.use(async (ctx, next) => {
+    let id = ctx.from.id;
+    let firstName = ctx.from.first_name;
+    let lastName = ctx.from.last_name;
+    let username = ctx.from.username;
+
+    //todo: move students inside location
+    let studentRef = db.collection('students');
+    let student = {firstName: firstName, lastName: lastName, username: username};
+    db.collection('students').where('id', '==', id).get().then((students) => {
+        ctx.session.quote.student = student;
+        if (students.docs.length) {
+            students.forEach((student) => {
+                student.ref.update(ctx.session.quote.student);
+            });
+
+            return next();
+        }
+        studentRef.add(student);
 
         return next();
     });

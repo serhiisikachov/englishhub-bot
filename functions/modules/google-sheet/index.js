@@ -3,11 +3,13 @@ const readline = require('readline');
 const {google} = require('googleapis');
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+const SCOPES = ['http://spreadsheets.google.com/feeds/spreadsheets/private/full'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
 const TOKEN_PATH = 'token.json';
+
+
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
@@ -87,6 +89,48 @@ function listMajors(auth) {
     });
 }
 
+function writeLine(auth)
+{
+    const sheets = google.sheets({version: 'v4', auth});
+    let values = [
+        [
+            'test',
+            'test',
+            'test',
+            'test',
+            'test',
+            'test',
+        ]
+    ];
+
+    let resource = {
+        values,
+    };
+    const request = {
+        // The ID of the spreadsheet to update.
+        spreadsheetId: '1seJSX7_QuB8a9FWYvuJEsoISV0sD-dZvdFnuRcYIbPQ',  // TODO: Update placeholder value.
+        valueInputOption: "RAW",
+        // The A1 notation of a range to search for a logical table of data.
+        // Values are appended after the last row of the table.
+        range: 'Bookings!A2',  // TODO: Update placeholder value
+        resource: resource
+    };
+
+
+    sheets.spreadsheets.values.append(
+        request
+        , (err, result) => {
+        if (err) {
+            // Handle error.
+            console.log(err);
+        } else {
+            console.log(`${result.updates.updatedCells} cells appended.`);
+        }
+    });
+
+
+}
+
 class GoogleSheet {
     init() {
         // Load client secrets from a local file.
@@ -94,7 +138,7 @@ class GoogleSheet {
             if (err) return console.log('Error loading client secret file:', err);
             //console.log(content);
             // Authorize a client with credentials, then call the Google Sheets API.
-            return authorize(JSON.parse(content), listMajors);
+            return authorize(JSON.parse(content), writeLine);
         });
     }
 }

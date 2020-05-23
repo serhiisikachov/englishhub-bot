@@ -1,23 +1,29 @@
 const Markup = require('telegraf/markup');
 const moment = require('moment');
+require('moment/locale/uk');
+moment.locale('uk');
+const {Graph, GraphVertex, GraphEdge} = require('../../../data-structures');
 
-class Timeslot {
-    constructor(firebase) {
-        this.db = firebase;
-        this.timeslotRef = this.db.collection('locations').doc('kharkiv').collection('timeslots');
+class Timeslot extends GraphVertex {
+    constructor(value) {
+        super(value);
+        this.db = value.firestore;
     }
 
-    renderByTeacher(ctx, offset = 0, editMessage = false) {
-        let teacherId = ctx.session.teacher.id;
+    render(ctx) {
+        let teacherId = ctx.session.quote.teacher.id;
         let limit = 10;
+        let offset = 0;
+        let editMessage = false;
         let total = 0;
+        let timeslotRef = this.db.collection('locations').doc(ctx.session.quote.location.selected).collection('timeslots');
 
-        this.timeslotRef.select().stream()
+        timeslotRef.select().stream()
             .on('data', (snap) => {
                 ++total;
             })
             .on("end", () => {
-                this.timeslotRef
+                timeslotRef
                     .where('teacher', '==', teacherId)
                     .limit(limit)
                     .offset(offset)
@@ -26,7 +32,10 @@ class Timeslot {
                     let slotButtons = [];
 
                     timelots.forEach((timeslot) => {
-                        let buttonText = timeslot.data().dateTime.toString();//moment(timeslot.data().dateTime.toString()).format('LLL');
+                        let dateTime = moment(Date.parse(timeslot.data().dateTime.toString()));
+                        let buttonText = `${dateTime.format('DD.MM.YYYY')} ${dateTime.format('LT')}`;
+                        console.log(moment(Date.parse(timeslot.data().dateTime.toString())).format('L'));
+                        //moment(timeslot.data().dateTime.toString()).format('LLL');
                         if (slotButtons[slotButtons.length - 1] && slotButtons[slotButtons.length - 1].length === 1) {
                             slotButtons[slotButtons.length - 1].push(Markup.callbackButton(buttonText, 'timeslot:' + timeslot.id));
                             return;
@@ -53,7 +62,7 @@ class Timeslot {
                     }
                     ctx.deleteMessage();
                     return ctx.reply(
-                        "Обирай слот",
+                        ctx.session.quote.teacher.name,
                         Markup.inlineKeyboard(slotButtons, {columns: 2}).extra()
                     );
                 }).catch((error) => {
@@ -62,17 +71,28 @@ class Timeslot {
             });
     }
 
-    renderByDate(ctx) {
+    handle(ctx) {
+        ctx.answerCbQuery(`Ти обрав ${ctx.match[1]}`);
+        return this.db.collection('locations').doc(ctx.session.quote.location.selected).collection('timeslots').doc(ctx.match[1]).get().then((timeslot)=>{
+            ctx.session.quote[this.getKey()] = {"id": timeslot.id, "dateTime": timeslot.data().dateTime};
+        });
 
     }
 
-    handle(ctx, next) {
-        ctx.answerCbQuery(`Ти обрав ${ctx.match[1]}`);
-        this.timeslotRef.doc(ctx.match[1]).get().then((timeslot)=>{
-            ctx.session.timeslot = {"id": timeslot.id, "dateTime": timeslot.data().dateTime};
-            next(ctx);
-        });
+    isFullfilled(ctx) {
+        return ctx.session.quote[this.getKey()];
+    }
 
+    cleanUp(ctx) {
+        ctx.session.quote[this.getKey()] = null;
+    }
+
+    requireInput() {
+        return true;
+    }
+
+    getKey() {
+        return 'timeslot';
     }
 }
 
