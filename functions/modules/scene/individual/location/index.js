@@ -1,5 +1,8 @@
 const Markup = require('telegraf/markup');
 const {Graph, GraphVertex, GraphEdge} = require('../../../data-structures');
+
+module.exports = Location;
+
 class Location extends GraphVertex {
     constructor(value) {
         super(value);
@@ -8,12 +11,6 @@ class Location extends GraphVertex {
         this.locationRef = this.db.collection('locations');
     }
 
-    //render
-    //handle
-    //isFullfilled
-    //cleanUp
-    //requireInput
-    //getKey
     render(ctx) {
         this.locationRef.get().then((locations) => {
             let buttons = [];
@@ -51,18 +48,7 @@ class Location extends GraphVertex {
         ctx.session.quote[this.getKey()] = null;
     }
 
-    requireInput() {
-        return true;
-    }
-
     getKey() {
         return 'location';
     }
 }
-
-function addHistoryLog(ctx, key)
-{
-
-}
-
-module.exports = Location;

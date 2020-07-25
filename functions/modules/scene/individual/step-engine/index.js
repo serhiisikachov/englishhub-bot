@@ -20,7 +20,7 @@ class StepEngine extends Graph{
             }
 
             if (currentStep) {
-                currentStep.render(ctx);
+                await currentStep.render(ctx);
                 if (ctx.scene.state.stepHistory) {
                     ctx.scene.state.stepHistory.push(currentStep.getKey());
                 }
@@ -89,13 +89,6 @@ function arePrevStepsFulfilled(ctx, graph, currentVertex) {
         if (!graph.getVertexByKey(key).isFullfilled(ctx)) {
             return false;
         }
-
-        // if (i === historyKeys.length - 1) {
-        //     let lastFullfilledNode = graph.getVertexByKey(key);
-        //
-        //     return graph.getNeighbors(lastFullfilledNode)
-        //         .filter(item => item.getKey() === currentVertex.getKey()).length
-        // }
     }
 
     return true;

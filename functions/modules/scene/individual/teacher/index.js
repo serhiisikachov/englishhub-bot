@@ -39,10 +39,6 @@ class Teacher extends GraphVertex {
         ctx.session.quote[this.getKey()] = null;
     }
 
-    requireInput() {
-        return true;
-    }
-
     getKey() {
         return 'teacher';
     }

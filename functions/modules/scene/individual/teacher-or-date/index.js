@@ -30,10 +30,6 @@ class TeacherOrDate extends GraphVertex {
         ctx.session.quote[this.getKey()] = null;
     }
 
-    requireInput() {
-        return true;
-    }
-
     getKey() {
         return 'teacherOrDate';
     }
